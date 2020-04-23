@@ -17,11 +17,12 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakDetector.Level;
+import io.netty.handler.logging.*;
 
 public class HelloWebServer {
 
 	static {
-		ResourceLeakDetector.setLevel(Level.DISABLED);
+		// ResourceLeakDetector.setLevel(Level.DISABLED);
 	}
 
 	private final int port;
@@ -54,7 +55,9 @@ public class HelloWebServer {
 			
 			b.option(ChannelOption.SO_BACKLOG, 8192);
 			b.option(ChannelOption.SO_REUSEADDR, true);
-			b.group(loupGroup).channel(serverChannelClass).childHandler(new HelloServerInitializer(loupGroup.next()));
+			b.group(loupGroup).channel(serverChannelClass)
+			// .handler(new LoggingHandler(LogLevel.INFO))
+			.childHandler(new HelloServerInitializer(loupGroup.next()));
 			b.childOption(ChannelOption.SO_REUSEADDR, true);
 
 			Channel ch = b.bind(inet).sync().channel();

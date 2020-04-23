@@ -18,6 +18,9 @@ import java.util.Date;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
+
 import com.jsoniter.output.JsonStream;
 import com.jsoniter.output.JsonStreamPool;
 import com.jsoniter.spi.JsonException;
@@ -35,6 +38,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.FastThreadLocal;
 
+
 public class HelloServerHandler extends ChannelInboundHandlerAdapter {
 
 	private static final FastThreadLocal<DateFormat> FORMAT = new FastThreadLocal<DateFormat>() {
@@ -43,6 +47,8 @@ public class HelloServerHandler extends ChannelInboundHandlerAdapter {
 			return new SimpleDateFormat("E, dd MMM yyyy HH:mm:ss z");
 		}
 	};
+
+	private static final ExecutorService executor = Executors.newWorkStealingPool(32);
 
 	private static Message newMsg() {
 		return new Message("Hello, World!");
@@ -89,12 +95,8 @@ public class HelloServerHandler extends ChannelInboundHandlerAdapter {
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
 		if (msg instanceof HttpRequest) {
-			try {
-				HttpRequest request = (HttpRequest) msg;
-				process(ctx, request);
-			} finally {
-				ReferenceCountUtil.release(msg);
-			}
+			HttpRequest request = (HttpRequest) msg;
+			process(ctx, request);
 		}
 	}
 
@@ -102,15 +104,38 @@ public class HelloServerHandler extends ChannelInboundHandlerAdapter {
 		String uri = request.uri();
 		switch (uri) {
 		case "/plaintext":
-			writePlainResponse(ctx, Unpooled.wrappedBuffer(STATIC_PLAINTEXT));
+			try {
+				writePlainResponse(ctx, Unpooled.wrappedBuffer(STATIC_PLAINTEXT));
+			} finally {
+				ReferenceCountUtil.release(request);
+			}
 			return;
 		case "/json":
-			byte[] json = serializeMsg(newMsg());
-			writeJsonResponse(ctx, Unpooled.wrappedBuffer(json));
+			// ctx.channel().eventLoop().submit(() -> 
+			executor.execute(() -> 
+			{
+				try {
+					byte[] json = serializeMsg(newMsg());
+					writeJsonResponse(ctx, Unpooled.wrappedBuffer(json));
+					ctx.flush();
+				}
+				catch(Exception ex) {
+					System.out.println("Failed " + ex);
+				} 
+				 finally {
+					ReferenceCountUtil.release(request);
+				}
+			}
+			);
 			return;
 		}
-		FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND, Unpooled.EMPTY_BUFFER, false);
-		ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+		
+		try {
+			FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, NOT_FOUND, Unpooled.EMPTY_BUFFER, false);
+			ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+		} finally {
+			ReferenceCountUtil.release(request);
+		}
 	}
 
 	private void writePlainResponse(ChannelHandlerContext ctx, ByteBuf buf) {
@@ -138,6 +163,6 @@ public class HelloServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-		ctx.flush();
+		// ctx.flush();
 	}
 }

@@ -4,10 +4,10 @@ imports:
 jobs:
   netty:
     source:
-      Repository: https://github.com/davidfowl/netty-playground
-      BranchOrCommit: master
-      DockerFile: Dockerfile
-      DockerImageName: netty
+      repository: https://github.com/davidfowl/netty-playground
+      branchOrCommit: master
+      dockerFile: Dockerfile
+      dockerImageName: netty
     port: 8080
 
 scenarios:

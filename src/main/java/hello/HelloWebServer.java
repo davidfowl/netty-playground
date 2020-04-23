@@ -22,7 +22,7 @@ import io.netty.handler.logging.*;
 public class HelloWebServer {
 
 	static {
-		// ResourceLeakDetector.setLevel(Level.DISABLED);
+		ResourceLeakDetector.setLevel(Level.DISABLED);
 	}
 
 	private final int port;

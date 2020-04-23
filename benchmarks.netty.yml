@@ -16,11 +16,11 @@ scenarios:
     application:
       job: netty
     warmup:
-      job: wrk
+      job: bombardier
       variables:
         serverPort: 8080
     load:
-      job: wrk
+      job: bombardier
       variables:
         serverPort: 8080
         path: /json

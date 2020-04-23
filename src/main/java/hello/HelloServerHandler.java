@@ -112,12 +112,12 @@ public class HelloServerHandler extends ChannelInboundHandlerAdapter {
 			return;
 		case "/json":
 			// ctx.channel().eventLoop().submit(() -> 
-			//executor.execute(() -> 
+			executor.execute(() -> 
 			{
 				try {
 					byte[] json = serializeMsg(newMsg());
 					writeJsonResponse(ctx, Unpooled.wrappedBuffer(json));
-					// ctx.flush();
+					ctx.flush();
 				}
 				catch(Exception ex) {
 					System.out.println("Failed " + ex);
@@ -126,7 +126,7 @@ public class HelloServerHandler extends ChannelInboundHandlerAdapter {
 					ReferenceCountUtil.release(request);
 				}
 			}
-			//);
+			);
 			return;
 		}
 		
@@ -163,6 +163,6 @@ public class HelloServerHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
-		ctx.flush();
+		// ctx.flush();
 	}
 }
